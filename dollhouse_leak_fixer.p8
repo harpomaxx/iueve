@@ -20,24 +20,27 @@ local feedback_timer = 0      -- frames remaining to show feedback message
 
 -- player character data
 local player = {
-  x = 64,           -- x position on screen
-  y = 64,           -- y position on screen  
+  x = 60,           -- x position on screen (start on ladder)
+  y = 80,           -- y position on screen  
   w = 8,            -- player sprite width
   h = 8,            -- player sprite height
   sprite = 1,       -- sprite index for drawing
-  room = 1,         -- current room id (1-5)
+  room = 0,         -- current room id (0=ladder, 1-5=rooms)
   inventory = nil   -- currently held tool (string) or nil
 }
 
--- room definitions for the dollhouse layout
--- kitchen: tool source, bedroom/bathroom/living: main rooms, attic: critical room
+-- room definitions for the 3-story dollhouse layout
+-- ground floor: kitchen + bedroom, second floor: bathroom + living, attic: critical room
 local rooms = {
-  {id=1, name="kitchen", x=0, y=48, w=32, h=24, flood_level=0, leak=false},    -- tool pickup location
-  {id=2, name="bedroom", x=32, y=48, w=32, h=24, flood_level=0, leak=false},   -- ceiling leaks
-  {id=3, name="bathroom", x=64, y=48, w=32, h=24, flood_level=0, leak=false},  -- plumbing leaks
-  {id=4, name="living", x=96, y=48, w=32, h=24, flood_level=0, leak=false},    -- window cracks
-  {id=5, name="attic", x=32, y=24, w=64, h=24, flood_level=0, leak=false, critical=true}  -- water tank leaks (2x flood rate)
+  {id=1, name="kitchen", x=0, y=72, w=48, h=24, flood_level=0, leak=false},     -- ground left: tool pickup
+  {id=2, name="bedroom", x=80, y=72, w=48, h=24, flood_level=0, leak=false},    -- ground right: ceiling leaks
+  {id=3, name="bathroom", x=0, y=48, w=48, h=24, flood_level=0, leak=false},    -- second left: plumbing leaks
+  {id=4, name="living", x=80, y=48, w=48, h=24, flood_level=0, leak=false},     -- second right: window cracks
+  {id=5, name="attic", x=0, y=24, w=128, h=24, flood_level=0, leak=false, critical=true}  -- top: water tank leaks
 }
+
+-- ladder area for vertical movement between floors
+local ladder = {x=48, y=24, w=32, h=72}
 
 -- tool system - kitchen cycles through available tools
 local tool_types = {"pot", "putty", "wrench", "rag", "plank"}  -- all available tool types
@@ -109,18 +112,30 @@ function update_game()
 end
 
 function update_player()
-  -- handle player input and movement
+  -- handle player input and movement with ladder mechanics
   local old_x, old_y = player.x, player.y
   
-  -- directional movement with arrow keys
+  -- check if player is on ladder for vertical movement
+  local on_ladder = player.x >= ladder.x and player.x < ladder.x + ladder.w
+  
+  -- horizontal movement (always allowed)
   if btn(0) then player.x -= 1 end  -- left arrow
   if btn(1) then player.x += 1 end  -- right arrow
-  if btn(2) then player.y -= 1 end  -- up arrow
-  if btn(3) then player.y += 1 end  -- down arrow
   
-  -- constrain player position to screen bounds
-  player.x = mid(0, player.x, screen_w - player.w)
-  player.y = mid(0, player.y, screen_h - player.h)
+  -- vertical movement (only on ladder or within same room)
+  if btn(2) then  -- up arrow
+    if on_ladder or can_move_vertically(player.x, player.y - 1) then
+      player.y -= 1
+    end
+  end
+  if btn(3) then  -- down arrow
+    if on_ladder or can_move_vertically(player.x, player.y + 1) then
+      player.y += 1
+    end
+  end
+  
+  -- constrain player position to valid areas
+  constrain_player_position()
   
   -- determine which room player is currently in
   update_player_room()
@@ -131,15 +146,52 @@ function update_player()
   end
 end
 
+function can_move_vertically(x, new_y)
+  -- check if vertical movement is allowed within current room boundaries
+  for i, room in pairs(rooms) do
+    if x >= room.x and x < room.x + room.w and
+       player.y >= room.y and player.y < room.y + room.h then
+      -- allow movement within current room's vertical bounds
+      return new_y >= room.y and new_y < room.y + room.h
+    end
+  end
+  return false
+end
+
+function constrain_player_position()
+  -- constrain player to valid areas (rooms or ladder)
+  player.x = mid(0, player.x, screen_w - player.w)
+  player.y = mid(24, player.y, screen_h - player.h)  -- can't go above attic
+  
+  -- if not on ladder, must be in a valid room
+  local on_ladder = player.x >= ladder.x and player.x < ladder.x + ladder.w
+  if not on_ladder then
+    local in_valid_room = false
+    for i, room in pairs(rooms) do
+      if player.x >= room.x and player.x < room.x + room.w and
+         player.y >= room.y and player.y < room.y + room.h then
+        in_valid_room = true
+        break
+      end
+    end
+    -- if not in valid room, push back to ladder
+    if not in_valid_room then
+      player.x = ladder.x + ladder.w/2 - player.w/2
+    end
+  end
+end
+
 function update_player_room()
   -- check collision with each room to determine current location
   for i, room in pairs(rooms) do
     if player.x >= room.x and player.x < room.x + room.w and
        player.y >= room.y and player.y < room.y + room.h then
       player.room = room.id
-      break
+      return
     end
   end
+  -- if not in any room, player is on ladder (room 0 for ladder area)
+  player.room = 0
 end
 
 -- ========================================
@@ -147,6 +199,11 @@ end
 -- ========================================
 
 function interact()
+  -- can't interact while on ladder
+  if player.room == 0 then
+    return
+  end
+  
   local room = rooms[player.room]
   
   -- kitchen: pick up currently available tool or swap current tool
@@ -316,28 +373,36 @@ function draw_game()
 end
 
 function draw_house()
-  -- draw dollhouse cutaway view with ZX Spectrum-inspired layout
+  -- draw 3-story dollhouse cutaway view with central ladder
   
   -- outer house outline
   rect(0, 24, 127, 95, 7)
   
-  -- room divider walls
-  line(32, 24, 32, 95, 7)   -- kitchen | bedroom
-  line(64, 24, 64, 95, 7)   -- bedroom | bathroom  
-  line(96, 24, 96, 95, 7)   -- bathroom | living
-  line(0, 48, 127, 48, 7)   -- attic floor | main floor
-  line(32, 24, 96, 24, 7)   -- attic ceiling
+  -- floor divisions
+  line(0, 48, 127, 48, 7)   -- second floor
+  line(0, 72, 127, 72, 7)   -- ground floor
+  
+  -- vertical room dividers (skip ladder area)
+  line(48, 48, 48, 95, 7)   -- left rooms | ladder
+  line(80, 48, 80, 95, 7)   -- ladder | right rooms
+  
+  -- central ladder
+  for i = 28, 92, 4 do
+    line(ladder.x + 8, i, ladder.x + 24, i, 6)  -- ladder rungs
+  end
+  line(ladder.x + 8, 24, ladder.x + 8, 95, 6)   -- left rail
+  line(ladder.x + 24, 24, ladder.x + 24, 95, 6) -- right rail
   
   -- room identification labels
-  print("kit", 4, 50, 6)     -- kitchen
-  print("bed", 36, 50, 6)    -- bedroom
-  print("bath", 66, 50, 6)   -- bathroom
-  print("liv", 100, 50, 6)   -- living room
-  print("attic", 48, 28, 6)  -- attic
+  print("kit", 4, 82, 6)      -- kitchen (ground left)
+  print("bed", 92, 82, 6)     -- bedroom (ground right)
+  print("bath", 4, 58, 6)     -- bathroom (second left)
+  print("liv", 92, 58, 6)     -- living (second right)
+  print("attic", 52, 34, 6)   -- attic (top)
   
   -- kitchen tool production display
-  print("tool:", 4, 76, 7)
-  print(tool_types[current_kitchen_tool], 4, 82, 11)
+  print("tool:", 4, 88, 7)
+  print(tool_types[current_kitchen_tool], 4, 92, 11)
 end
 
 function draw_leaks()
@@ -392,7 +457,7 @@ function draw_hud()
   end
   
   -- persistent attic leak warning (critical priority)
-  if rooms[4].leak then
+  if rooms[5].leak then
     print("attic leak!", 80, 2, 8)
   end
   
