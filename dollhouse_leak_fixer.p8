@@ -35,7 +35,7 @@ local rooms = {
   {id=1, name="kitchen", x=0, y=48, w=32, h=24, flood_level=0, leak=false},    -- tool pickup location
   {id=2, name="bedroom", x=32, y=48, w=32, h=24, flood_level=0, leak=false},   -- ceiling leaks
   {id=3, name="bathroom", x=64, y=48, w=32, h=24, flood_level=0, leak=false},  -- plumbing leaks
-  {id=4, name="living", x=96, y=48, w=32, h=24, flood_level=0, leak=false},    -- window leaks
+  {id=4, name="living", x=96, y=48, w=32, h=24, flood_level=0, leak=false},    -- window cracks
   {id=5, name="attic", x=32, y=24, w=64, h=24, flood_level=0, leak=false, critical=true}  -- water tank leaks (2x flood rate)
 }
 
@@ -192,7 +192,7 @@ function can_fix_leak(room, tool)
   elseif room.name == "bathroom" then
     return tool == "wrench" or tool == "putty"  -- plumbing leaks: tighten or seal pipes
   elseif room.name == "living" then
-    return tool == "plank" or tool == "putty"   -- window leaks: board up or seal cracks
+    return tool == "plank" or tool == "putty"   -- window cracks: board up or seal cracks
   elseif room.name == "attic" then
     return tool == "wrench" or tool == "putty"  -- water tank leaks: repair fittings or seal
   end
@@ -206,7 +206,7 @@ function get_correct_tools(room)
   elseif room.name == "bathroom" then
     return "wrench/putty"  -- plumbing leak solutions  
   elseif room.name == "living" then
-    return "plank/putty"   -- window leak solutions
+    return "plank/putty"   -- window crack solutions
   elseif room.name == "attic" then
     return "wrench/putty"  -- water tank leak solutions
   end
@@ -234,9 +234,9 @@ function spawn_random_leak()
   -- randomly spawn a new leak in an available room
   local available_rooms = {}
   
-  -- collect rooms that can receive new leaks (not already leaking, not fully flooded)
+  -- collect rooms that can receive new leaks (exclude kitchen, not already leaking, not fully flooded)
   for i, room in pairs(rooms) do
-    if not room.leak and room.flood_level < max_flood_level then
+    if room.name != "kitchen" and not room.leak and room.flood_level < max_flood_level then
       add(available_rooms, room)
     end
   end
@@ -324,7 +324,7 @@ function draw_house()
   -- room divider walls
   line(32, 24, 32, 95, 7)   -- kitchen | bedroom
   line(64, 24, 64, 95, 7)   -- bedroom | bathroom  
-  line(96, 24, 96, 95, 7)   -- bathroom | living room
+  line(96, 24, 96, 95, 7)   -- bathroom | living
   line(0, 48, 127, 48, 7)   -- attic floor | main floor
   line(32, 24, 96, 24, 7)   -- attic ceiling
   
@@ -332,7 +332,7 @@ function draw_house()
   print("kit", 4, 50, 6)     -- kitchen
   print("bed", 36, 50, 6)    -- bedroom
   print("bath", 66, 50, 6)   -- bathroom
-  print("live", 100, 50, 6)  -- living room
+  print("liv", 100, 50, 6)   -- living room
   print("attic", 48, 28, 6)  -- attic
   
   -- kitchen tool production display
@@ -392,20 +392,22 @@ function draw_hud()
   end
   
   -- persistent attic leak warning (critical priority)
-  if rooms[5].leak then
+  if rooms[4].leak then
     print("attic leak!", 80, 2, 8)
   end
   
   -- flood level progress bars for main floor rooms
+  local bar_index = 0
   for i, room in pairs(rooms) do
     if room.name != "attic" then  -- skip attic in flood display
-      local bar_x = 2 + (i-1) * 20
+      local bar_x = 2 + bar_index * 25
       local bar_y = 120
+      bar_index += 1
       -- empty bar outline
-      rect(bar_x, bar_y, bar_x + 16, bar_y + 4, 7)
+      rect(bar_x, bar_y, bar_x + 20, bar_y + 4, 7)
       -- filled portion based on flood level
       if room.flood_level > 0 then
-        local fill_width = flr((room.flood_level / max_flood_level) * 16)
+        local fill_width = flr((room.flood_level / max_flood_level) * 20)
         rectfill(bar_x, bar_y, bar_x + fill_width, bar_y + 4, 8)  -- red fill
       end
     end
