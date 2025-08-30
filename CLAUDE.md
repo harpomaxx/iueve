@@ -96,3 +96,4 @@ The complete game design document is available in `game_design_doc_with_sketch.p
 - Progressive difficulty scaling
 - Retro ZX Spectrum aesthetic
 - Simple but engaging mechanics
+- the main file is dollhouse_leak_fixer.p8. All changes should be done there unless it was explicity mentioned.
