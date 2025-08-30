@@ -39,14 +39,14 @@ local player = {
 -- ground floor: kitchen + bedroom, second floor: bathroom + living, attic: critical room
 local rooms = {
   {id=1, name="kitchen", x=0, y=88, w=48, h=32, flood_level=0, leak=false},     -- ground left: tool pickup
-  {id=2, name="bedroom", x=80, y=88, w=48, h=32, flood_level=0, leak=false},    -- ground right: ceiling leaks
+  {id=2, name="bedroom", x=64, y=88, w=64, h=32, flood_level=0, leak=false},    -- ground right: ceiling leaks
   {id=3, name="bathroom", x=0, y=56, w=48, h=32, flood_level=0, leak=false},    -- second left: plumbing leaks
-  {id=4, name="living", x=80, y=56, w=48, h=32, flood_level=0, leak=false},     -- second right: window cracks
+  {id=4, name="living", x=64, y=56, w=64, h=32, flood_level=0, leak=false},     -- second right: window cracks
   {id=5, name="attic", x=0, y=24, w=128, h=32, flood_level=0, leak=false, critical=true}  -- top: water tank leaks
 }
 
 -- ladder area for vertical movement between floors (collision area wider than visual)
-local ladder = {x=48, y=52, w=32, h=67}
+local ladder = {x=48, y=52, w=16, h=67}
 
 -- floor levels for realistic dollhouse physics (adjusted for 16px player height)
 local floor_levels = {
@@ -201,10 +201,10 @@ end
 function get_floor_level(x, y)
   -- determine which floor level the player should be on based on position
   -- check ground floor rooms first
-  if (x < 48 or x >= 80) and y >= 88 then
+  if (x < 48 or x >= 64) and y >= 88 then
     return floor_levels.ground
   -- check second floor rooms  
-  elseif (x < 48 or x >= 80) and y >= 56 and y < 88 then
+  elseif (x < 48 or x >= 64) and y >= 56 and y < 88 then
     return floor_levels.second
   -- check attic
   elseif y >= 24 and y < 56 then
@@ -460,7 +460,7 @@ function draw_house()
   
   -- vertical room dividers (skip ladder area)
   -- line(48, 56, 48, 119, 10)   -- left rooms | ladder
-  -- line(80, 56, 80, 119, 10)   -- ladder | right rooms
+  -- line(64, 56, 64, 119, 10)   -- ladder | right rooms
   
   -- central ladder (extended)
   for i = 52, 116, 6 do
@@ -471,9 +471,9 @@ function draw_house()
   
   -- room identification labels (adjusted for taller rooms)
   print("kit", 4, 98, 6)      -- kitchen (ground left)
-  print("bed", 92, 98, 6)     -- bedroom (ground right)
+  print("bed", 84, 98, 6)     -- bedroom (ground right)
   print("bath", 4, 66, 6)     -- bathroom (second left)
-  print("liv", 92, 66, 6)     -- living (second right)
+  print("liv", 84, 66, 6)     -- living (second right)
   print("attic", 52, 34, 6)   -- attic (top)
   
   -- kitchen tool production display (moved down for taller room)
