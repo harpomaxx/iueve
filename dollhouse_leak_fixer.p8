@@ -21,7 +21,7 @@ local feedback_timer = 0      -- frames remaining to show feedback message
 -- player character data
 local player = {
   x = 60,           -- x position on screen (start on ladder)
-  y = 100,          -- y position on screen (adjusted for taller house)
+  y = 112,          -- y position on screen (start at ground floor level)
   w = 8,            -- player sprite width
   h = 8,            -- player sprite height
   sprite = 1,       -- sprite index for drawing
@@ -41,6 +41,13 @@ local rooms = {
 
 -- ladder area for vertical movement between floors (extended height)
 local ladder = {x=48, y=24, w=32, h=96}
+
+-- floor levels for realistic dollhouse physics
+local floor_levels = {
+  ground = 112,    -- bottom of ground floor rooms (y=88+32-8 for player height)
+  second = 80,     -- bottom of second floor rooms (y=56+32-8 for player height)  
+  attic = 48       -- bottom of attic room (y=24+32-8 for player height)
+}
 
 -- tool system - kitchen cycles through available tools
 local tool_types = {"pot", "putty", "wrench", "rag", "plank"}  -- all available tool types
@@ -112,7 +119,7 @@ function update_game()
 end
 
 function update_player()
-  -- handle player input and movement with ladder mechanics
+  -- handle player input and movement with floor-based physics
   local old_x, old_y = player.x, player.y
   
   -- check if player is on ladder for vertical movement
@@ -122,17 +129,14 @@ function update_player()
   if btn(0) then player.x -= 1 end  -- left arrow
   if btn(1) then player.x += 1 end  -- right arrow
   
-  -- vertical movement (only on ladder or within same room)
-  if btn(2) then  -- up arrow
-    if on_ladder or can_move_vertically(player.x, player.y - 1) then
-      player.y -= 1
-    end
+  -- vertical movement (ONLY on ladder)
+  if on_ladder then
+    if btn(2) then player.y -= 1 end  -- up arrow (ladder only)
+    if btn(3) then player.y += 1 end  -- down arrow (ladder only)
   end
-  if btn(3) then  -- down arrow
-    if on_ladder or can_move_vertically(player.x, player.y + 1) then
-      player.y += 1
-    end
-  end
+  
+  -- apply gravity and floor physics
+  apply_floor_physics()
   
   -- constrain player position to valid areas
   constrain_player_position()
@@ -146,16 +150,32 @@ function update_player()
   end
 end
 
-function can_move_vertically(x, new_y)
-  -- check if vertical movement is allowed within current room boundaries
-  for i, room in pairs(rooms) do
-    if x >= room.x and x < room.x + room.w and
-       player.y >= room.y and player.y < room.y + room.h then
-      -- allow movement within current room's vertical bounds
-      return new_y >= room.y and new_y < room.y + room.h
+function apply_floor_physics()
+  -- gravity system: snap player to appropriate floor level based on position
+  local on_ladder = player.x >= ladder.x and player.x < ladder.x + ladder.w
+  
+  -- if not on ladder, apply floor gravity based on room position
+  if not on_ladder then
+    local target_floor = get_floor_level(player.x, player.y)
+    if target_floor then
+      player.y = target_floor  -- snap to floor
     end
   end
-  return false
+end
+
+function get_floor_level(x, y)
+  -- determine which floor level the player should be on based on position
+  -- check ground floor rooms first
+  if (x < 48 or x >= 80) and y >= 88 then
+    return floor_levels.ground
+  -- check second floor rooms  
+  elseif (x < 48 or x >= 80) and y >= 56 and y < 88 then
+    return floor_levels.second
+  -- check attic
+  elseif y >= 24 and y < 56 then
+    return floor_levels.attic
+  end
+  return nil  -- on ladder or invalid area
 end
 
 function constrain_player_position()
@@ -163,18 +183,24 @@ function constrain_player_position()
   player.x = mid(0, player.x, screen_w - player.w)
   player.y = mid(24, player.y, 120 - player.h)  -- expanded house height
   
-  -- if not on ladder, must be in a valid room
+  -- if not on ladder, must be in a valid room at floor level
   local on_ladder = player.x >= ladder.x and player.x < ladder.x + ladder.w
   if not on_ladder then
     local in_valid_room = false
+    
+    -- check if player is in any room's horizontal bounds
     for i, room in pairs(rooms) do
-      if player.x >= room.x and player.x < room.x + room.w and
-         player.y >= room.y and player.y < room.y + room.h then
-        in_valid_room = true
-        break
+      if player.x >= room.x and player.x < room.x + room.w then
+        -- check if player is at appropriate floor level for this room
+        local correct_floor = get_floor_level(player.x, room.y + room.h/2)
+        if correct_floor and player.y == correct_floor then
+          in_valid_room = true
+          break
+        end
       end
     end
-    -- if not in valid room, push back to ladder
+    
+    -- if not in valid room at floor level, push back to ladder
     if not in_valid_room then
       player.x = ladder.x + ladder.w/2 - player.w/2
     end
@@ -223,15 +249,20 @@ function interact()
       sfx(0)  -- play pickup sound
     end
   
-  -- other rooms: attempt to fix leak with current tool
+  -- other rooms: attempt to fix leak from floor position
   elseif room.leak and player.inventory then
-    if can_fix_leak(room, player.inventory) then
-      -- correct tool: fix the leak
+    if can_reach_ceiling_leak(room) and can_fix_leak(room, player.inventory) then
+      -- correct tool and in range: fix the leak
       fix_leak(room, player.inventory)
       feedback_msg = "leak fixed!"
       feedback_timer = 120
       player.inventory = nil  -- consume the tool
       sfx(1)  -- play success sound
+    elseif not can_reach_ceiling_leak(room) then
+      -- not in range of ceiling leak
+      feedback_msg = "move closer to leak"
+      feedback_timer = 120
+      sfx(2)  -- play error sound
     else
       -- wrong tool: show what tools are needed
       feedback_msg = "wrong tool! need: " .. get_correct_tools(room)
@@ -239,6 +270,15 @@ function interact()
       sfx(2)  -- play error sound
     end
   end
+end
+
+function can_reach_ceiling_leak(room)
+  -- check if player is close enough to interact with ceiling leak from floor
+  local room_center_x = room.x + room.w / 2
+  local distance = abs(player.x + player.w/2 - room_center_x)
+  
+  -- player must be within reasonable horizontal distance of leak center
+  return distance <= 16  -- within 16 pixels of room center
 end
 
 function can_fix_leak(room, tool)
