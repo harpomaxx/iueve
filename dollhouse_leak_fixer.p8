@@ -21,7 +21,7 @@ local feedback_timer = 0      -- frames remaining to show feedback message
 -- player character data
 local player = {
   x = 60,           -- x position on screen (start on ladder)
-  y = 80,           -- y position on screen  
+  y = 100,          -- y position on screen (adjusted for taller house)
   w = 8,            -- player sprite width
   h = 8,            -- player sprite height
   sprite = 1,       -- sprite index for drawing
@@ -29,33 +29,33 @@ local player = {
   inventory = nil   -- currently held tool (string) or nil
 }
 
--- room definitions for the 3-story dollhouse layout
+-- room definitions for the 3-story dollhouse layout (expanded height)
 -- ground floor: kitchen + bedroom, second floor: bathroom + living, attic: critical room
 local rooms = {
-  {id=1, name="kitchen", x=0, y=72, w=48, h=24, flood_level=0, leak=false},     -- ground left: tool pickup
-  {id=2, name="bedroom", x=80, y=72, w=48, h=24, flood_level=0, leak=false},    -- ground right: ceiling leaks
-  {id=3, name="bathroom", x=0, y=48, w=48, h=24, flood_level=0, leak=false},    -- second left: plumbing leaks
-  {id=4, name="living", x=80, y=48, w=48, h=24, flood_level=0, leak=false},     -- second right: window cracks
-  {id=5, name="attic", x=0, y=24, w=128, h=24, flood_level=0, leak=false, critical=true}  -- top: water tank leaks
+  {id=1, name="kitchen", x=0, y=88, w=48, h=32, flood_level=0, leak=false},     -- ground left: tool pickup
+  {id=2, name="bedroom", x=80, y=88, w=48, h=32, flood_level=0, leak=false},    -- ground right: ceiling leaks
+  {id=3, name="bathroom", x=0, y=56, w=48, h=32, flood_level=0, leak=false},    -- second left: plumbing leaks
+  {id=4, name="living", x=80, y=56, w=48, h=32, flood_level=0, leak=false},     -- second right: window cracks
+  {id=5, name="attic", x=0, y=24, w=128, h=32, flood_level=0, leak=false, critical=true}  -- top: water tank leaks
 }
 
--- ladder area for vertical movement between floors
-local ladder = {x=48, y=24, w=32, h=72}
+-- ladder area for vertical movement between floors (extended height)
+local ladder = {x=48, y=24, w=32, h=96}
 
 -- tool system - kitchen cycles through available tools
 local tool_types = {"pot", "putty", "wrench", "rag", "plank"}  -- all available tool types
 local current_kitchen_tool = 1      -- index of currently available tool in kitchen
 local tool_cycle_timer = 0          -- frames since last tool cycle
-local tool_cycle_interval = 180     -- cycle every 3 seconds (180 frames at 60fps)
+local tool_cycle_interval = 120     -- cycle every 2 seconds (120 frames at 60fps)
 
 -- leak spawning system - difficulty increases over time
 local leak_timer = 0           -- frames since last leak spawn
-local leak_interval = 300      -- initial spawn interval: 5 seconds (decreases over time)
+local leak_interval = 600      -- initial spawn interval: 10 seconds (decreases over time)
 local attic_multiplier = 1     -- flood rate multiplier (2x when attic has leak)
 
 -- flood mechanics - water rises continuously when leaks are active
-local flood_rate = 0.01         -- base flood rate per frame
-local max_flood_level = 20      -- room is completely flooded at this level
+local flood_rate = 0.004        -- base flood rate per frame (slower for ladder navigation)
+local max_flood_level = 25      -- room is completely flooded at this level (adjusted for taller rooms)
 
 -- ========================================
 -- PICO-8 CALLBACK FUNCTIONS
@@ -161,7 +161,7 @@ end
 function constrain_player_position()
   -- constrain player to valid areas (rooms or ladder)
   player.x = mid(0, player.x, screen_w - player.w)
-  player.y = mid(24, player.y, screen_h - player.h)  -- can't go above attic
+  player.y = mid(24, player.y, 120 - player.h)  -- expanded house height
   
   -- if not on ladder, must be in a valid room
   local on_ladder = player.x >= ladder.x and player.x < ladder.x + ladder.w
@@ -373,36 +373,36 @@ function draw_game()
 end
 
 function draw_house()
-  -- draw 3-story dollhouse cutaway view with central ladder
+  -- draw 3-story dollhouse cutaway view with central ladder (expanded height)
   
-  -- outer house outline
-  rect(0, 24, 127, 95, 7)
+  -- outer house outline (taller house)
+  rect(0, 24, 127, 119, 7)
   
   -- floor divisions
-  line(0, 48, 127, 48, 7)   -- second floor
-  line(0, 72, 127, 72, 7)   -- ground floor
+  line(0, 56, 127, 56, 7)   -- second floor
+  line(0, 88, 127, 88, 7)   -- ground floor
   
   -- vertical room dividers (skip ladder area)
-  line(48, 48, 48, 95, 7)   -- left rooms | ladder
-  line(80, 48, 80, 95, 7)   -- ladder | right rooms
+  line(48, 56, 48, 119, 7)   -- left rooms | ladder
+  line(80, 56, 80, 119, 7)   -- ladder | right rooms
   
-  -- central ladder
-  for i = 28, 92, 4 do
+  -- central ladder (extended)
+  for i = 28, 116, 4 do
     line(ladder.x + 8, i, ladder.x + 24, i, 6)  -- ladder rungs
   end
-  line(ladder.x + 8, 24, ladder.x + 8, 95, 6)   -- left rail
-  line(ladder.x + 24, 24, ladder.x + 24, 95, 6) -- right rail
+  line(ladder.x + 8, 24, ladder.x + 8, 119, 6)   -- left rail
+  line(ladder.x + 24, 24, ladder.x + 24, 119, 6) -- right rail
   
-  -- room identification labels
-  print("kit", 4, 82, 6)      -- kitchen (ground left)
-  print("bed", 92, 82, 6)     -- bedroom (ground right)
-  print("bath", 4, 58, 6)     -- bathroom (second left)
-  print("liv", 92, 58, 6)     -- living (second right)
+  -- room identification labels (adjusted for taller rooms)
+  print("kit", 4, 98, 6)      -- kitchen (ground left)
+  print("bed", 92, 98, 6)     -- bedroom (ground right)
+  print("bath", 4, 66, 6)     -- bathroom (second left)
+  print("liv", 92, 66, 6)     -- living (second right)
   print("attic", 52, 34, 6)   -- attic (top)
   
-  -- kitchen tool production display
-  print("tool:", 4, 88, 7)
-  print(tool_types[current_kitchen_tool], 4, 92, 11)
+  -- kitchen tool production display (moved down for taller room)
+  print("tool:", 4, 104, 7)
+  print(tool_types[current_kitchen_tool], 4, 110, 11)
 end
 
 function draw_leaks()
@@ -461,18 +461,18 @@ function draw_hud()
     print("attic leak!", 80, 2, 8)
   end
   
-  -- flood level progress bars for main floor rooms
+  -- flood level progress bars for main floor rooms (moved to bottom)
   local bar_index = 0
   for i, room in pairs(rooms) do
     if room.name != "attic" then  -- skip attic in flood display
-      local bar_x = 2 + bar_index * 25
-      local bar_y = 120
+      local bar_x = 2 + bar_index * 30
+      local bar_y = 122  -- moved down for taller house
       bar_index += 1
       -- empty bar outline
-      rect(bar_x, bar_y, bar_x + 20, bar_y + 4, 7)
+      rect(bar_x, bar_y, bar_x + 24, bar_y + 4, 7)
       -- filled portion based on flood level
       if room.flood_level > 0 then
-        local fill_width = flr((room.flood_level / max_flood_level) * 20)
+        local fill_width = flr((room.flood_level / max_flood_level) * 24)
         rectfill(bar_x, bar_y, bar_x + fill_width, bar_y + 4, 8)  -- red fill
       end
     end
