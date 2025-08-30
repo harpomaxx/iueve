@@ -132,29 +132,39 @@ function update_player()
   local on_ladder = player.x >= ladder.x and player.x < ladder.x + ladder.w
   
   -- horizontal movement (always allowed) with animation
-  local moving = false
+  local moving_horizontal = false
+  local moving_vertical = false
+  
   if btn(0) then 
     player.x -= 1
     player.anim_state = "walking_left"
     player.last_direction = "left"
-    moving = true
+    moving_horizontal = true
   end
   if btn(1) then 
     player.x += 1
     player.anim_state = "walking_right"
     player.last_direction = "right"
-    moving = true
-  end
-  
-  -- set idle state when not moving horizontally
-  if not moving then
-    player.anim_state = "idle"
+    moving_horizontal = true
   end
   
   -- vertical movement (ONLY on ladder)
   if on_ladder then
-    if btn(2) then player.y -= 1 end  -- up arrow (ladder only)
-    if btn(3) then player.y += 1 end  -- down arrow (ladder only)
+    if btn(2) then 
+      player.y -= 1
+      player.anim_state = "climbing"
+      moving_vertical = true
+    end
+    if btn(3) then 
+      player.y += 1
+      player.anim_state = "climbing"
+      moving_vertical = true
+    end
+  end
+  
+  -- set idle state when not moving at all
+  if not moving_horizontal and not moving_vertical then
+    player.anim_state = "idle"
   end
   
   -- apply gravity and floor physics
@@ -501,6 +511,12 @@ function get_player_sprites()
       tl, tr, bl, br = 6, 7, 22, 23    -- walking left frame 1
     else
       tl, tr, bl, br = 8, 9, 24, 25    -- walking left frame 2
+    end
+  elseif player.anim_state == "climbing" then
+    if player.anim_frame == 1 then
+      tl, tr, bl, br = 10, 11, 26, 27   -- climbing frame 1
+    else
+      tl, tr, bl, br = 12, 13, 28, 29   -- climbing frame 2
     end
   else
     -- idle state: use frame 1 of last direction
