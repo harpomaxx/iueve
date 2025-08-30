@@ -151,6 +151,9 @@ function ugo()
   _init()
   gs="playing"
  end
+ if btn(4) then
+  print("z pressed",40,80,8)
+ end
 end
 
 function _draw()
