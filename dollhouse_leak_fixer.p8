@@ -20,11 +20,14 @@ local feedback_timer = 0      -- frames remaining to show feedback message
 
 -- player character data
 local player = {
-  x = 60,           -- x position on screen (start on ladder)
-  y = 112,          -- y position on screen (start at ground floor level)
-  w = 8,            -- player sprite width
-  h = 8,            -- player sprite height
-  sprite = 1,       -- sprite index for drawing
+  x = 56,           -- x position on screen (start on ladder, adjusted for 16x16)
+  y = 104,          -- y position on screen (start at ground floor level, adjusted for 16px height)
+  w = 16,           -- player sprite width (16x16 for animation support)
+  h = 16,           -- player sprite height
+  sprite_tl = 1,    -- top-left sprite (2x2 composition system)
+  sprite_tr = 2,    -- top-right sprite
+  sprite_bl = 17,   -- bottom-left sprite (next row in sprite sheet)
+  sprite_br = 18,   -- bottom-right sprite
   room = 0,         -- current room id (0=ladder, 1-5=rooms)
   inventory = nil   -- currently held tool (string) or nil
 }
@@ -42,11 +45,11 @@ local rooms = {
 -- ladder area for vertical movement between floors (extended height)
 local ladder = {x=48, y=24, w=32, h=96}
 
--- floor levels for realistic dollhouse physics
+-- floor levels for realistic dollhouse physics (adjusted for 16px player height)
 local floor_levels = {
-  ground = 112,    -- bottom of ground floor rooms (y=88+32-8 for player height)
-  second = 80,     -- bottom of second floor rooms (y=56+32-8 for player height)  
-  attic = 48       -- bottom of attic room (y=24+32-8 for player height)
+  ground = 104,    -- bottom of ground floor rooms (y=88+32-16 for player height)
+  second = 72,     -- bottom of second floor rooms (y=56+32-16 for player height)  
+  attic = 40       -- bottom of attic room (y=24+32-16 for player height)
 }
 
 -- tool system - kitchen cycles through available tools
@@ -273,12 +276,13 @@ function interact()
 end
 
 function can_reach_ceiling_leak(room)
-  -- check if player is close enough to interact with ceiling leak from floor
+  -- check if player is close enough to interact with ceiling leak from floor (adjusted for 16x16 player)
   local room_center_x = room.x + room.w / 2
-  local distance = abs(player.x + player.w/2 - room_center_x)
+  local player_center_x = player.x + player.w/2
+  local distance = abs(player_center_x - room_center_x)
   
-  -- player must be within reasonable horizontal distance of leak center
-  return distance <= 16  -- within 16 pixels of room center
+  -- player must be within reasonable horizontal distance of leak center (larger range for bigger player)
+  return distance <= 20  -- within 20 pixels of room center (was 16)
 end
 
 function can_fix_leak(room, tool)
@@ -406,8 +410,8 @@ function draw_game()
   draw_leaks()    -- leak indicators and attic warnings
   draw_flooding() -- water levels in each room
   
-  -- render player character sprite
-  spr(player.sprite, player.x, player.y)
+  -- render player character as 2x2 sprite composition
+  draw_player()
   
   draw_hud()      -- score, inventory, messages, flood bars
 end
@@ -443,6 +447,14 @@ function draw_house()
   -- kitchen tool production display (moved down for taller room)
   print("tool:", 4, 104, 7)
   print(tool_types[current_kitchen_tool], 4, 110, 11)
+end
+
+function draw_player()
+  -- draw 16x16 player using 2x2 sprite composition (ready for future animation)
+  spr(player.sprite_tl, player.x, player.y)           -- top-left
+  spr(player.sprite_tr, player.x + 8, player.y)       -- top-right
+  spr(player.sprite_bl, player.x, player.y + 8)       -- bottom-left
+  spr(player.sprite_br, player.x + 8, player.y + 8)   -- bottom-right
 end
 
 function draw_leaks()
