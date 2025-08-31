@@ -27,6 +27,12 @@ local player = {
   room = 0,         -- current room id (0=ladder, 1-5=rooms)
   inventory = nil,  -- currently held tool (string) or nil
   
+  -- movement system
+  vel_x = 0,        -- horizontal velocity for smooth movement
+  max_speed = 1.5,  -- maximum walking speed
+  accel = 0.3,      -- acceleration when starting to move
+  friction = 0.7,   -- deceleration when stopping
+  
   -- animation system
   anim_state = "idle",      -- idle, walking_left, walking_right
   anim_frame = 1,           -- current animation frame (1 or 2)
@@ -87,6 +93,7 @@ function _init()
   player.y = 103
   player.room = 0
   player.inventory = nil
+  player.vel_x = 0
   player.anim_state = "idle"
   player.anim_frame = 1
   player.anim_timer = 0
@@ -163,34 +170,60 @@ function update_player()
   -- check if player is on ladder for vertical movement
   local on_ladder = player.x >= ladder.x and player.x < ladder.x + ladder.w
   
-  -- horizontal movement (always allowed) with animation
+  -- horizontal movement with smooth acceleration/deceleration
   local moving_horizontal = false
   local moving_vertical = false
   
   if btn(0) then 
-    player.x -= 1
+    -- accelerate left
+    player.vel_x = max(-player.max_speed, player.vel_x - player.accel)
     player.anim_state = "walking_left"
     player.last_direction = "left"
     moving_horizontal = true
-  end
-  if btn(1) then 
-    player.x += 1
+  elseif btn(1) then 
+    -- accelerate right  
+    player.vel_x = min(player.max_speed, player.vel_x + player.accel)
     player.anim_state = "walking_right"
     player.last_direction = "right"
     moving_horizontal = true
+  else
+    -- apply friction when no input
+    if abs(player.vel_x) > 0.1 then
+      player.vel_x *= player.friction
+    else
+      player.vel_x = 0
+    end
+  end
+  
+  -- apply velocity to position
+  player.x += player.vel_x
+  
+  -- update horizontal movement state
+  if abs(player.vel_x) > 0.1 then
+    moving_horizontal = true
+    if player.vel_x < 0 then
+      player.anim_state = "walking_left"
+    else
+      player.anim_state = "walking_right" 
+    end
   end
   
   -- vertical movement (ONLY on ladder)
   if on_ladder then
     if btn(2) then 
       player.y -= 1
-      player.anim_state = "climbing"
+      player.anim_state = "climbing_up"
       moving_vertical = true
     end
     if btn(3) then 
       player.y += 1
-      player.anim_state = "climbing"
+      player.anim_state = "climbing_down"
       moving_vertical = true
+    end
+    
+    -- if on ladder but not moving vertically, show ladder idle pose
+    if not moving_vertical and not moving_horizontal then
+      player.anim_state = "ladder_idle"
     end
   end
   
@@ -517,8 +550,20 @@ function update_player_animation()
   -- update animation timer
   player.anim_timer += 1
   
+  -- different animation speeds for different states
+  local current_speed = player.anim_speed
+  if player.anim_state == "climbing_up" or player.anim_state == "climbing_down" then
+    current_speed = 10  -- faster animation for climbing (more responsive)
+  elseif player.anim_state == "ladder_idle" then
+    current_speed = 45  -- slower subtle animation when idle on ladder
+  elseif player.anim_state == "walking_left" or player.anim_state == "walking_right" then
+    -- walking animation speed based on movement velocity for realistic timing
+    local speed_factor = abs(player.vel_x) / player.max_speed
+    current_speed = max(6, flr(12 - (speed_factor * 4)))  -- faster animation when moving faster
+  end
+  
   -- switch animation frame when timer reaches speed threshold
-  if player.anim_timer >= player.anim_speed then
+  if player.anim_timer >= current_speed then
     player.anim_timer = 0
     if player.anim_frame == 1 then
       player.anim_frame = 2
@@ -544,12 +589,22 @@ function get_player_sprites()
     else
       tl, tr, bl, br = 8, 9, 24, 25    -- walking left frame 2
     end
-  elseif player.anim_state == "climbing" then
+  elseif player.anim_state == "climbing_up" then
     if player.anim_frame == 1 then
-      tl, tr, bl, br = 10, 11, 26, 27   -- climbing frame 1
+      tl, tr, bl, br = 10, 11, 26, 27   -- climbing up frame 1
     else
-      tl, tr, bl, br = 12, 13, 28, 29   -- climbing frame 2
+      tl, tr, bl, br = 12, 13, 28, 29   -- climbing up frame 2
     end
+  elseif player.anim_state == "climbing_down" then
+    -- reverse animation frames for climbing down
+    if player.anim_frame == 1 then
+      tl, tr, bl, br = 12, 13, 28, 29   -- climbing down frame 1 (reversed)
+    else
+      tl, tr, bl, br = 10, 11, 26, 27   -- climbing down frame 2 (reversed)
+    end
+  elseif player.anim_state == "ladder_idle" then
+    -- static pose when on ladder but not moving
+    tl, tr, bl, br = 11, 10, 27, 26   -- holding ladder pose (mirrored climbing frame)
   else
     -- idle state: use frame 1 of last direction
     if player.last_direction == "right" then
@@ -566,10 +621,30 @@ function draw_player()
   -- draw 16x16 player using 2x2 sprite composition with animation
   local tl, tr, bl, br = get_player_sprites()
   
-  spr(tl, player.x, player.y)           -- top-left
-  spr(tr, player.x + 8, player.y)       -- top-right
-  spr(bl, player.x, player.y + 8)       -- bottom-left
-  spr(br, player.x + 8, player.y + 8)   -- bottom-right
+  -- add movement effects for different animation states
+  local offset_x = 0
+  local offset_y = 0
+  
+  if player.anim_state == "climbing_up" or player.anim_state == "climbing_down" then
+    -- subtle sway effect during climbing
+    offset_x = player.anim_frame == 1 and -1 or 1
+  elseif player.anim_state == "ladder_idle" then
+    -- very subtle breathing effect when idle on ladder
+    offset_x = flr(sin(time_elapsed / 60) * 0.5)
+  elseif player.anim_state == "walking_left" or player.anim_state == "walking_right" then
+    -- subtle vertical bob during walking (bouncing effect)
+    offset_y = player.anim_frame == 2 and -1 or 0  -- slight hop on frame 2
+    -- tiny horizontal shake for more dynamic walking
+    offset_x = player.anim_frame == 1 and 0 or (player.anim_state == "walking_right" and 1 or -1)
+  end
+  
+  local draw_x = player.x + offset_x
+  local draw_y = player.y + offset_y
+  
+  spr(tl, draw_x, draw_y)           -- top-left
+  spr(tr, draw_x + 8, draw_y)       -- top-right
+  spr(bl, draw_x, draw_y + 8)       -- bottom-left
+  spr(br, draw_x + 8, draw_y + 8)   -- bottom-right
 end
 
 function draw_leaks()
