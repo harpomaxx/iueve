@@ -12,7 +12,7 @@ local room_w = 32     -- standard room width
 local room_h = 24     -- standard room height
 
 -- game state variables
-local gamestate = "playing"   -- current game state: "playing" or "gameover"
+local gamestate = "start"     -- current game state: "start", "playing" or "gameover"
 local score = 0               -- player score based on survival time + leak fixes
 local time_elapsed = 0        -- total frames elapsed since game start
 local feedback_msg = ""       -- current message to display to player
@@ -82,7 +82,7 @@ local max_flood_level = 25      -- room is completely flooded at this level (adj
 
 function _init()
   -- reset all game state variables for fresh start
-  gamestate = "playing"
+  gamestate = "start"
   score = 0
   time_elapsed = 0
   feedback_msg = ""
@@ -120,7 +120,9 @@ end
 
 function _update60()
   -- main update loop called 60 times per second
-  if gamestate == "playing" then
+  if gamestate == "start" then
+    update_startscreen()
+  elseif gamestate == "playing" then
     update_game()
   elseif gamestate == "gameover" then
     update_gameover()
@@ -130,6 +132,49 @@ end
 -- ========================================
 -- GAME UPDATE FUNCTIONS
 -- ========================================
+
+function update_startscreen()
+  -- handle input on start screen
+  time_elapsed += 1  -- needed for blinking cursor animation
+  
+  if btnp(4) then  -- x button to start game
+    -- initialize game when starting from start screen
+    gamestate = "playing"
+    score = 0
+    time_elapsed = 0
+    feedback_msg = ""
+    feedback_timer = 0
+    
+    -- reset player to starting position
+    player.x = 56
+    player.y = 103
+    player.room = 0
+    player.inventory = nil
+    player.vel_x = 0
+    player.anim_state = "idle"
+    player.anim_frame = 1
+    player.anim_timer = 0
+    player.last_direction = "right"
+    
+    -- reset all room states
+    for i, room in pairs(rooms) do
+      room.flood_level = 0
+      room.leak = false
+    end
+    
+    -- reset tool system
+    current_kitchen_tool = nil  -- start with no tool, will generate one immediately
+    tool_cycle_timer = 0
+    
+    -- reset leak spawning system
+    leak_timer = 0
+    leak_interval = 600  -- reset to initial 10 second interval
+    attic_multiplier = 1
+    
+    -- spawn first leak to start the game
+    spawn_random_leak()
+  end
+end
 
 function update_game()
   -- update all game timers
@@ -499,7 +544,9 @@ function _draw()
   -- main render function called once per frame
   cls()  -- clear screen
   
-  if gamestate == "playing" then
+  if gamestate == "start" then
+    draw_startscreen()
+  elseif gamestate == "playing" then
     draw_game()
   elseif gamestate == "gameover" then
     draw_gameover()
@@ -774,6 +821,35 @@ function draw_hud()
         rectfill(bar_x, bar_y, bar_x + fill_width, bar_y + 4, 8)  -- red fill
       end
     end
+  end
+end
+
+function draw_startscreen()
+  -- start screen with title, credits, and winter mega jam info
+  cls()  -- clear screen with black background
+  
+  -- big title using repeated characters to make bigger letters
+  print("III U U EEE V V EEE", 18, 10, 10)
+  print(" I  U U E   V V E  ", 18, 16, 10)
+  print(" I  U U EE  v v EE ", 18, 22, 10)
+  print(" I  U U E   V V E  ", 18, 28, 10)
+  print("III UUU EEE  V  EEE", 18, 34, 10)
+  
+  -- subtitle/description
+  print("programming: harpo and claude", 0, 62, 6) 
+  print("art: lili and luca", 20, 70, 6)  -- light gray
+  
+  -- credits
+  print("created for", 35, 80, 6)      -- light gray
+  print("winter mega jam 2025", 20, 88, 11)     -- cyan highlight
+  print("mendoza, argentina", 25, 96, 11)       -- cyan highlight
+  
+  -- start instruction
+  print("press x to start", 28, 115, 7)         -- white
+  
+  -- add a simple blinking cursor effect
+  if time_elapsed % 60 < 30 then  -- blink every second
+    print(">", 20, 115, 7)  -- simple cursor
   end
 end
 
