@@ -75,7 +75,39 @@ local max_flood_level = 25      -- room is completely flooded at this level (adj
 -- ========================================
 
 function _init()
-  -- initialize game state and spawn first leak
+  -- reset all game state variables for fresh start
+  gamestate = "playing"
+  score = 0
+  time_elapsed = 0
+  feedback_msg = ""
+  feedback_timer = 0
+  
+  -- reset player to starting position
+  player.x = 56
+  player.y = 103
+  player.room = 0
+  player.inventory = nil
+  player.anim_state = "idle"
+  player.anim_frame = 1
+  player.anim_timer = 0
+  player.last_direction = "right"
+  
+  -- reset all room states
+  for i, room in pairs(rooms) do
+    room.flood_level = 0
+    room.leak = false
+  end
+  
+  -- reset tool system
+  current_kitchen_tool = 1
+  tool_cycle_timer = 0
+  
+  -- reset leak spawning system
+  leak_timer = 0
+  leak_interval = 600  -- reset to initial 10 second interval
+  attic_multiplier = 1
+  
+  -- spawn first leak to start the game
   spawn_random_leak()
 end
 
@@ -398,16 +430,16 @@ function update_flooding()
 end
 
 function check_game_over()
-  -- count how many main floor rooms are completely flooded
+  -- count how many rooms are completely flooded (excluding kitchen)
   local flooded_rooms = 0
   for i, room in pairs(rooms) do
-    -- only count main floor rooms (attic flooding doesn't end game)
-    if room.name != "attic" and room.flood_level >= max_flood_level then
+    -- kitchen doesn't count toward game over (tool source only), but attic does
+    if room.name != "kitchen" and room.flood_level >= max_flood_level then
       flooded_rooms += 1
     end
   end
   
-  -- game over when all 4 main rooms are fully flooded
+  -- game over when all 4 main rooms are fully flooded (bedroom, bathroom, living, attic)
   if flooded_rooms >= 4 then
     gamestate = "gameover"
   end
@@ -596,10 +628,10 @@ function draw_hud()
     print("attic leak!", 80, 2, 8)
   end
   
-  -- flood level progress bars for main floor rooms (moved to bottom)
+  -- flood level progress bars for all game rooms (moved to bottom)
   local bar_index = 0
   for i, room in pairs(rooms) do
-    if room.name != "attic" then  -- skip attic in flood display
+    if room.name != "kitchen" then  -- skip kitchen (tool source only), include attic
       local bar_x = 2 + bar_index * 30
       local bar_y = 122  -- moved down for taller house
       bar_index += 1
