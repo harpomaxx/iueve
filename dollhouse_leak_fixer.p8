@@ -25,7 +25,7 @@ local player = {
   w = 16,           -- player sprite width (16x16 for animation support)
   h = 16,           -- player sprite height
   room = 0,         -- current room id (0=ladder, 1-5=rooms)
-  inventory = nil,  -- currently held tool (string) or nil
+  inventory = nil,  -- currently held tool ID (1-5) or nil
   
   -- movement system
   vel_x = 0,        -- horizontal velocity for smooth movement
@@ -61,8 +61,8 @@ local floor_levels = {
   attic = 40       -- bottom of attic room (y=24+32-16 for player height)
 }
 
--- tool system - kitchen cycles through available tools
-local tool_types = {"pot", "putty", "wrench", "rag", "plank"}  -- all available tool types
+-- tool system - kitchen cycles through available tools (numeric IDs save memory)
+-- tool IDs: 1=pot, 2=putty, 3=wrench, 4=rag, 5=plank (sprites 32-36)
 local current_kitchen_tool = 1      -- index of currently available tool in kitchen
 local tool_cycle_timer = 0          -- frames since last tool cycle
 local tool_cycle_interval = 120     -- cycle every 2 seconds (120 frames at 60fps)
@@ -145,7 +145,7 @@ function update_game()
   
   -- cycle to next kitchen tool when timer expires
   if tool_cycle_timer >= tool_cycle_interval then
-    current_kitchen_tool = (current_kitchen_tool % #tool_types) + 1
+    current_kitchen_tool = (current_kitchen_tool % 5) + 1  -- cycle through 5 tools
     tool_cycle_timer = 0
   end
   
@@ -336,15 +336,14 @@ function interact()
   if room.name == "kitchen" then
     if not player.inventory then
       -- pick up tool when not carrying anything
-      player.inventory = tool_types[current_kitchen_tool]
-      feedback_msg = "picked up " .. player.inventory
+      player.inventory = current_kitchen_tool
+      feedback_msg = "picked up tool"
       feedback_timer = 120  -- show message for 2 seconds
       sfx(0)  -- play pickup sound
     else
       -- swap current tool with kitchen tool
-      local old_tool = player.inventory
-      player.inventory = tool_types[current_kitchen_tool]
-      feedback_msg = "swapped " .. old_tool .. " for " .. player.inventory
+      player.inventory = current_kitchen_tool
+      feedback_msg = "swapped tool"
       feedback_timer = 120  -- show message for 2 seconds
       sfx(0)  -- play pickup sound
     end
@@ -382,17 +381,17 @@ function can_reach_ceiling_leak(room)
   return distance <= 20  -- within 20 pixels of room center (was 16)
 end
 
-function can_fix_leak(room, tool)
-  -- check if the given tool can fix leaks in the given room
-  -- each room type has specific tools that work for its leak types
+function can_fix_leak(room, tool_id)
+  -- check if the given tool ID can fix leaks in the given room
+  -- tool IDs: 1=pot, 2=putty, 3=wrench, 4=rag, 5=plank
   if room.name == "bedroom" then
-    return tool == "pot" or tool == "rag"      -- ceiling leaks: catch or absorb water
+    return tool_id == 1 or tool_id == 4      -- pot or rag: ceiling leaks
   elseif room.name == "bathroom" then
-    return tool == "wrench" or tool == "putty"  -- plumbing leaks: tighten or seal pipes
+    return tool_id == 3 or tool_id == 2      -- wrench or putty: plumbing leaks
   elseif room.name == "living" then
-    return tool == "plank" or tool == "putty"   -- window cracks: board up or seal cracks
+    return tool_id == 5 or tool_id == 2      -- plank or putty: window cracks
   elseif room.name == "attic" then
-    return tool == "wrench" or tool == "putty"  -- water tank leaks: repair fittings or seal
+    return tool_id == 3 or tool_id == 2      -- wrench or putty: water tank leaks
   end
   return false
 end
@@ -408,7 +407,7 @@ function get_correct_tools(room)
   elseif room.name == "attic" then
     return "wrench/putty"  -- water tank leak solutions
   end
-  return "unknown"
+  return "wrong tool"
 end
 
 function fix_leak(room, tool)
@@ -543,7 +542,8 @@ function draw_house()
   
   -- kitchen tool production display (moved down for taller room)
   print("tool:", 4, 104, 7)
-  print(tool_types[current_kitchen_tool], 4, 110, 11)
+  -- draw current tool sprite instead of text (sprites 32-36 for tools)
+  spr(31 + current_kitchen_tool, 24, 102)
 end
 
 function update_player_animation()
@@ -727,9 +727,10 @@ function draw_hud()
   -- current score (survival time + repair bonuses)
   print("score: " .. score, 2, 2, 7)
   
-  -- show currently carried tool
+  -- show currently carried tool as sprite
   if player.inventory then
-    print("item: " .. player.inventory, 2, 8, 11)
+    print("item:", 45, 2, 11)
+    spr(31 + player.inventory, 65, 1)  -- player.inventory is now tool ID (1-5)
   end
   
   -- temporary feedback messages with color coding
@@ -795,10 +796,14 @@ __gfx__
 00000335133500000000053311335000000513333331500000005331533000000005331133500000000513333331500000051333333150000000000000000000
 00000335033500000000053300335000000513355331500000005330533000000005330033500000000513355331500000051335533150000000000000000000
 00000535053500000000533500535000000533500533500000005350535000000005350053350000000533500533500000053350053350000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000aaa0000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000aaaaaaa00000000000000000000000000000000000000000000000000000000000
-000000000000000000000000000000000000000000000000000000000000aaaaa0aaaaa000000000000000000000000000000000000000000000000000000000
+00000000000000000000000004444440000000000ff0000000000333330000666666000000007770000000000000000000000000000000000000000000000000
+0000550000000000000aa00004f4ff40000000000ffff00000033333333306666666660000777777700000000000000000000000000000000000000000000000
+000050505500005500a9aa0004f4ff4000000000fffff0000333b333b3306633cc336600777ccc77700000000000000000000000000000000000000000000000
+000055505d5555d50aa99a0004ffff4000000000ffff000033333333330666666666007777777770000000000000000000000000000000000000000000000000
+000600005dddddd50a999aa004fffff0000000000ff0000000033333300066666600000077770000000000000000000000000000000000000000000000000000
+056000005ddddd650a9a99aa04ffff400000000000f0000000003333000006666000000007770000000000000000000000000000000000000000000000000000
+00500000056666500a9aa99a04ff4f40000000000000000000000333000006666000000007770000000000000000000000000000000000000000000000000000
+00000000005555000aa00aaa044444400000000000000000000000000000aaaaa0aaaaa000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000aaaaa00000aaaaa0000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000aaaaa000000000aaaa000000000000000000000000000000000000000000000000000000
 000000000000000000000000000cccccccccccccaaaaa0000000000000000000000000000000000000000aaaaa00000000000000000000000000000000000000
