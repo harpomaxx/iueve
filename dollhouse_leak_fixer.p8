@@ -76,6 +76,10 @@ local attic_multiplier = 1     -- flood rate multiplier (2x when attic has leak)
 local flood_rate = 0.004        -- base flood rate per frame (slower for ladder navigation)
 local max_flood_level = 25      -- room is completely flooded at this level (adjusted for taller rooms)
 
+-- music system - background music state
+local current_music = -1       -- currently playing music track (-1 = none)
+local music_enabled = true     -- allow music on/off toggle
+
 -- ========================================
 -- PICO-8 CALLBACK FUNCTIONS
 -- ========================================
@@ -116,6 +120,12 @@ function _init()
   
   -- spawn first leak to start the game
   spawn_random_leak()
+  
+  -- reset music state
+  current_music = -1
+  if music_enabled then
+    play_music(0)  -- start with title music
+  end
 end
 
 function _update60()
@@ -136,6 +146,12 @@ end
 function update_startscreen()
   -- handle input on start screen
   time_elapsed += 1  -- needed for blinking cursor animation
+  
+  -- toggle music with O button
+  if btnp(5) then
+    toggle_music()
+    sfx(0)  -- play confirmation sound
+  end
   
   if btnp(4) then  -- x button to start game
     -- initialize game when starting from start screen
@@ -173,6 +189,11 @@ function update_startscreen()
     
     -- spawn first leak to start the game
     spawn_random_leak()
+    
+    -- switch to gameplay music
+    if music_enabled and current_music != 1 then
+      play_music(1)  -- atmospheric gameplay music
+    end
   end
 end
 
@@ -497,6 +518,9 @@ function spawn_random_leak()
     -- attic leaks cause accelerated flooding in all rooms
     if room.name == "attic" then
       attic_multiplier = 2  -- double flood rate everywhere
+      sfx(10)  -- dramatic attic leak sound
+    else
+      sfx(9)  -- regular leak spawn sound
     end
   end
 end
@@ -525,6 +549,10 @@ function check_game_over()
   -- game over when all 4 main rooms are fully flooded (bedroom, bathroom, living, attic)
   if flooded_rooms >= 4 then
     gamestate = "gameover"
+    -- play game over music
+    if music_enabled and current_music != 2 then
+      play_music(2)  -- sad game over music
+    end
   end
 end
 
@@ -533,6 +561,41 @@ function update_gameover()
   if btnp(4) then  -- x button to restart
     _init()
     gamestate = "playing"
+  end
+end
+
+-- ========================================
+-- MUSIC SYSTEM FUNCTIONS
+-- ========================================
+
+function play_music(track)
+  -- switch to a new background music track
+  if music_enabled and track != current_music then
+    music(track)  -- start playing the music track
+    current_music = track
+  end
+end
+
+function stop_music()
+  -- stop all background music
+  music(-1)
+  current_music = -1
+end
+
+function toggle_music()
+  -- toggle music on/off
+  music_enabled = not music_enabled
+  if not music_enabled then
+    stop_music()
+  else
+    -- resume appropriate music for current game state
+    if gamestate == "start" then
+      play_music(0)  -- title music
+    elseif gamestate == "playing" then
+      play_music(1)  -- gameplay music
+    elseif gamestate == "gameover" then
+      play_music(2)  -- game over music
+    end
   end
 end
 
@@ -867,6 +930,10 @@ function draw_startscreen()
   -- start instruction
   print("press x to start", 28, 115, 7)         -- white
   
+  -- music toggle instruction
+  local music_status = music_enabled and "on" or "off"
+  print("o: music " .. music_status, 28, 105, 6)  -- gray
+  
   -- add a simple blinking cursor effect
   if time_elapsed % 60 < 30 then  -- blink every second
     print(">", 20, 115, 7)  -- simple cursor
@@ -977,3 +1044,19 @@ __sfx__
 001000000c0500e0500f0501005012050140501505016050180501a0501b0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c05000000000000000000000000000000000000
 001000001005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005000000
 00100000060500a0500e0501105013050140501505016050170501805019050190501905019050190501905019050190501905019050190501905019050190501905019050190501905019050190501905000000
+001000000f0500e0500c0500a05008050060500405002050000500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+010400001605018050190501a0501b0501c0501d0501e0501f05020050210502205023050240502505026050270502805029050290502905029050290502905029050290502905029050290502905029050290500
+010400000c0500b0500a0500905008050070500605005050040500305002050010500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050
+001000000305003050030500305003050030500305003050030500305003050030500305003050030500305003050030500305003050030500305003050030500305003050030500305003050030500305000000
+011000200f0341003410034100341003410034100341003410034100341003410034100341003410034100340f0340f0340f0340f0340f0340f0340f0340f0340f0340f0340f0340f0340f0340f0340f0340f034
+011000200c0341003410034100341003410034100341003410034100341003410034100341003410034100340c0340c0340c0340c0340c0340c0340c0340c0340c0340c0340c0340c0340c0340c0340c0340c034
+001000001c0501a050180501605014050120501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005000000
+001800000805009050090500905009050090500905009050090500905009050090500905009050090500905009050090500905009050090500905009050090500905009050090500905009050090500905000000
+001000001f0501d0501a050180501505012050100500e0500c05009050070500505003050020500105000050000500005000050000500005000050000500005000050000500005000050000500005000050000000
+001000000505006050070500805009050090500905009050090500905009050090500905009050090500905009050090500905009050090500905009050090500905009050090500905009050090500905000000
+001000000c0500d0500e0500f050100501105012050130501405015050160501705018050190501a0501b0501c0501d0501e0501f050200502105022050230502405025050260502705028050290502a0502b050000000
+001000001f0501e0501d0501c0501b0501a050190501805017050160501505014050130501205011050100500f0500e0500d0500c0500b0500a050090500805007050060500505004050030500205001050000500
+__music__
+00 03444344
+01 05464546  
+02 07484748
