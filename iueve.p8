@@ -1028,7 +1028,7 @@ function draw_startscreen()
   -- subtitle/description
   print("programming: harpo and claude", 0, 52, 6) 
   print("art: lili and luca", 20, 60, 6)  -- light gray
-  print("design ideas: bruno",20,68,6)
+  print("design ideas: Hornet Team and bruno",20,68,6)
   -- high score display
   print("high score: " .. highscore, 30, 40, 11)  -- cyan highlight
   
