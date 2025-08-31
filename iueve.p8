@@ -752,7 +752,7 @@ function draw_house()
  -- print("bed", 84, 98, 6)     -- bedroom (ground right)
  -- print("bath", 4, 66, 6)     -- bathroom (second left)
  -- print("liv", 84, 66, 6)     -- living (second right)
-  print("attic", 52, 34, 6)   -- attic (top)
+ -- print("attic", 52, 34, 6)   -- attic (top)
   
   -- kitchen tool production display (moved down for taller room)
   print("tool:", 4, 104, 7)
