@@ -35,5 +35,7 @@ Arrow keys to move, Z/X to interact. X restarts when you inevitably lose.
 Made for Winter MEGA JAM 2025. Built in PICO-8 because constraints are fun.
 
 Programming: harpomaxx and Claude ;-)
+
 Art: Luca and [lili.fiallo](http://www.instagram.com/fiallolili)
-Desing Idas: Bruno
+
+Desing Ideas: Bruno
