@@ -590,13 +590,58 @@ function draw_leaks()
 end
 
 function draw_flooding()
-  -- draw rising water levels as blue rectangles from floor up
+  -- draw rising water levels with animated, layered water effects
   for i, room in pairs(rooms) do
     if room.flood_level > 0 then
       local flood_height = flr(room.flood_level)
-      -- draw water from bottom of room upward
-      rectfill(room.x, room.y + room.h - flood_height, 
-               room.x + room.w, room.y + room.h, 1)  -- dark blue water
+      local water_bottom = room.y + room.h - flood_height
+      local water_top = room.y + room.h
+      
+      -- draw main water body in dark blue
+      rectfill(room.x, water_bottom, room.x + room.w, water_top, 1)  -- dark blue water
+      
+      -- add animated wave pattern for surface movement
+      if flood_height >= 3 then
+        local wave_offset = flr(time_elapsed / 8) % 4  -- slow wave animation
+        for x = room.x, room.x + room.w - 1, 4 do
+          local wave_y = water_bottom + ((x + wave_offset) % 3)
+          if wave_y < water_bottom + 3 then
+            pset(x, wave_y, 12)  -- cyan wave dots
+            pset(x + 1, wave_y, 12)
+          end
+        end
+      end
+      
+      -- add cyan surface layer (top portion)
+      if flood_height >= 2 then
+        local cyan_height = max(1, flr(flood_height * 0.15))
+        rectfill(room.x, water_bottom, room.x + room.w, 
+                 water_bottom + cyan_height, 12)  -- cyan surface
+      end
+      
+      -- add subtle transparency effect with dithered pattern
+      if flood_height >= 4 then
+        for y = water_bottom + 2, water_top - 1, 2 do
+          for x = room.x, room.x + room.w - 1, 2 do
+            if (x + y) % 4 == 0 then
+              pset(x, y, 5)  -- dark gray dots for depth
+            end
+          end
+        end
+      end
+      
+      -- add bubble effects for active leaks
+      if room.leak and flood_height >= 1 then
+        local bubble_time = (time_elapsed + room.id * 30) % 60
+        if bubble_time < 20 then
+          local bubble_x = room.x + room.w/2 + sin(time_elapsed / 30) * 8
+          local bubble_y = water_bottom + bubble_time / 3
+          if bubble_y < water_top - 1 then
+            pset(bubble_x, bubble_y, 7)  -- white bubble
+            pset(bubble_x + 1, bubble_y, 6)  -- light gray shadow
+          end
+        end
+      end
     end
   end
 end
