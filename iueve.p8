@@ -12,13 +12,18 @@ local room_w = 32     -- standard room width
 local room_h = 24     -- standard room height
 
 -- game state variables
-local gamestate = "start"     -- current game state: "start", "playing" or "gameover"
+local gamestate = "start"     -- current game state: "start", "cinematic", "playing" or "gameover"
 local score = 0               -- player score based on survival time + leak fixes
 local highscore = 0           -- persistent high score
 local new_highscore = false   -- flag for new high score achievement
 local time_elapsed = 0        -- total frames elapsed since game start
 local feedback_msg = ""       -- current message to display to player
 local feedback_timer = 0      -- frames remaining to show feedback message
+
+-- cinematic variables
+local cinematic_time = 0      -- frames elapsed in cinematic
+local cinematic_phase = 1     -- current phase of cinematic (1=rain, 2=text)
+local rain_drops = {}         -- array of rain drop positions
 
 -- player character data
 local player = {
@@ -83,6 +88,67 @@ local current_music = -1       -- currently playing music track (-1 = none)
 local music_enabled = true     -- allow music on/off toggle
 
 -- ========================================
+-- CINEMATIC HELPER FUNCTIONS
+-- ========================================
+
+function init_rain_drops()
+  rain_drops = {}
+  for i = 1, 50 do
+    add(rain_drops, {
+      x = rnd(128),
+      y = rnd(128),
+      speed = 2 + rnd(3),
+      len = 3 + rnd(2)
+    })
+  end
+end
+
+function update_rain()
+  for drop in all(rain_drops) do
+    drop.y += drop.speed
+    if drop.y > 128 then
+      drop.y = -drop.len
+      drop.x = rnd(128)
+    end
+  end
+end
+
+function start_actual_game()
+  gamestate = "playing"
+  score = 0
+  time_elapsed = 0
+  feedback_msg = ""
+  feedback_timer = 0
+  
+  player.x = 56
+  player.y = 103
+  player.room = 0
+  player.inventory = nil
+  player.vel_x = 0
+  player.anim_state = "idle"
+  player.anim_frame = 1
+  player.anim_timer = 0
+  player.last_direction = "right"
+  
+  for i, room in pairs(rooms) do
+    room.flood_level = 0
+    room.leak = false
+  end
+  
+  current_kitchen_tool = nil
+  tool_cycle_timer = 0
+  leak_timer = 0
+  leak_interval = 600
+  attic_multiplier = 1
+  
+  spawn_random_leak()
+  
+  if music_enabled and current_music != 1 then
+    play_music(1)
+  end
+end
+
+-- ========================================
 -- PICO-8 CALLBACK FUNCTIONS
 -- ========================================
 
@@ -139,6 +205,8 @@ function _update60()
   -- main update loop called 60 times per second
   if gamestate == "start" then
     update_startscreen()
+  elseif gamestate == "cinematic" then
+    update_cinematic()
   elseif gamestate == "playing" then
     update_game()
   elseif gamestate == "gameover" then
@@ -161,8 +229,11 @@ function update_startscreen()
   end
   
   if btnp(4) then  -- x button to start game
-    -- initialize game when starting from start screen
-    gamestate = "playing"
+    -- start cinematic sequence
+    gamestate = "cinematic"
+    cinematic_time = 0
+    cinematic_phase = 1
+    init_rain_drops()
     score = 0
     time_elapsed = 0
     feedback_msg = ""
@@ -197,9 +268,9 @@ function update_startscreen()
     -- spawn first leak to start the game
     spawn_random_leak()
     
-    -- switch to gameplay music
-    if music_enabled and current_music != 1 then
-      play_music(1)  -- atmospheric gameplay music
+    -- play atmospheric rain sound
+    if music_enabled then
+      sfx(12)  -- rain sound effect
     end
   end
 end
@@ -634,6 +705,8 @@ function _draw()
   
   if gamestate == "start" then
     draw_startscreen()
+  elseif gamestate == "cinematic" then
+    draw_cinematic()
   elseif gamestate == "playing" then
     draw_game()
   elseif gamestate == "gameover" then
@@ -990,6 +1063,80 @@ function draw_gameover()
   end
   
   print("press button to restart", 20, 85, 6)      -- gray restart instruction
+end
+
+function update_cinematic()
+  cinematic_time += 1
+  
+  if cinematic_phase == 1 then
+    update_rain()
+    if cinematic_time >= 240 then
+      cinematic_phase = 2
+      cinematic_time = 0
+    end
+  elseif cinematic_phase == 2 then
+    update_rain()
+    if cinematic_time >= 360 then
+      start_actual_game()
+    end
+  end
+  
+  if btnp(4) or btnp(5) then
+    start_actual_game()
+  end
+end
+
+function draw_cinematic()
+  cls(0)
+  draw_rain()
+  
+  if cinematic_phase == 1 then
+    if cinematic_time < 60 then
+      print("*heavy rain sounds*", 25, 115, 6)
+    end
+  elseif cinematic_phase == 2 then
+    rectfill(5, 45, 123, 95, 1)
+    rect(5, 45, 123, 95, 7)
+    
+    print("ah, mendoza...", 35, 50, 7)
+    
+    if cinematic_time > 60 then
+      print("where houses from the 40s", 18, 58, 11)
+    end
+    
+    if cinematic_time > 120 then
+      print("still use the same pipes", 16, 66, 11)
+    end
+    
+    if cinematic_time > 180 then
+      print("and every time it rains...", 16, 74, 8)
+    end
+    
+    if cinematic_time > 240 then
+      print("brings new adventures!", 18, 82, 12)
+    end
+    
+    if cinematic_time > 300 then
+      print("press any button to start", 12, 100, 6)
+    end
+  end
+end
+
+function draw_rain()
+  for drop in all(rain_drops) do
+    line(drop.x, drop.y, drop.x, drop.y - drop.len, 12)
+    
+    if drop.speed > 3 then
+      pset(drop.x, drop.y - 1, 7)
+    end
+  end
+  
+  if rnd() < 0.3 then
+    local splash_x = rnd(128)
+    pset(splash_x, 127, 12)
+    pset(splash_x + 1, 127, 12)
+    pset(splash_x - 1, 127, 12)
+  end
 end
 
 -- ========================================
