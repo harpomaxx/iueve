@@ -105,3 +105,4 @@ The complete game design document is available in `game_design_doc_with_sketch.p
 - `docs/game_design_doc_with_sketch.pdf` - Complete game design document
 - `docs/development_plan.md` - Implementation roadmap and technical details
 - `assets/` - Contains reference materials and asset information
+- there is a problem when editing the file with the update() tool, try to use multiedit tool instead
