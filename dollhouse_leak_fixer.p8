@@ -971,7 +971,7 @@ function draw_gameover()
     print("high score: " .. highscore, 32, 70, 6)  -- gray for existing high score
   end
   
-  print("press x to restart", 25, 85, 6)      -- gray restart instruction
+  print("press button to restart", 20, 85, 6)      -- gray restart instruction
 end
 
 -- ========================================
