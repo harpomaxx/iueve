@@ -358,10 +358,19 @@ end
 function constrain_player_position()
   -- constrain player to valid areas (rooms or ladder)
   player.x = mid(1, player.x, screen_w - player.w)
-  player.y = mid(24, player.y, 120 - player.h)  -- expanded house height
+  
+  -- check if player is on ladder for Y constraints
+  local on_ladder = player.x >= ladder.x and player.x < ladder.x + ladder.w
+  
+  if on_ladder then
+    -- when on ladder, allow reaching attic floor (y=40) but prevent climbing too high above ladder
+    player.y = mid(floor_levels.attic, player.y, ladder.y + ladder.h - player.h)
+  else
+    -- when not on ladder, constrain to full house height
+    player.y = mid(24, player.y, 120 - player.h)  -- expanded house height
+  end
   
   -- if not on ladder, must be in a valid room at floor level
-  local on_ladder = player.x >= ladder.x and player.x < ladder.x + ladder.w
   if not on_ladder then
     local in_valid_room = false
     
