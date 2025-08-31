@@ -15,7 +15,7 @@ This repository contains "Dollhouse Leak Fixer," a retro-inspired game for the P
 
 ### File Management
 - **Primary file**: `dollhouse_leak_fixer_compact.p8` (5.5KB, optimized for PICO-8's 8KB limit)
-- **Development file**: `dollhouse_leak_fixer.p8` (10KB, readable version with full variable names)
+- **Development file**: `iueve.p8` (~46KB, readable version with full variable names and comments)
 - Use the compact version for actual gameplay, development version for code modifications
 
 ### Memory Constraints
@@ -82,10 +82,10 @@ When modifying code and approaching the 8KB limit:
 
 ## Development Workflow
 
-1. **Modify readable version** (`dollhouse_leak_fixer.p8`) for development
+1. **Modify readable version** (`iueve.p8`) for development
 2. **Test functionality** thoroughly in readable format
 3. **Create compressed version** when ready for deployment
-4. **Verify size constraints** before final PICO-8 loading
+4. **Verify size constraints** before final PICO-8 loading (`wc -c dollhouse_leak_fixer_compact.p8`)
 5. **Update both versions** to maintain code synchronization
 
 ## Game Design Reference
@@ -96,4 +96,12 @@ The complete game design document is available in `game_design_doc_with_sketch.p
 - Progressive difficulty scaling
 - Retro ZX Spectrum aesthetic
 - Simple but engaging mechanics
-- the main file is dollhouse_leak_fixer.p8. All changes should be done there unless it was explicity mentioned.
+- The main development file is `iueve.p8`. All changes should be done there unless explicitly mentioned.
+
+## Important Files Structure
+
+- `iueve.p8` - Main development file with full readable code
+- `dollhouse_leak_fixer_compact.p8` - Compressed version for PICO-8 deployment
+- `docs/game_design_doc_with_sketch.pdf` - Complete game design document
+- `docs/development_plan.md` - Implementation roadmap and technical details
+- `assets/` - Contains reference materials and asset information
