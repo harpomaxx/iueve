@@ -1076,7 +1076,7 @@ function update_cinematic()
     end
   elseif cinematic_phase == 2 then
     update_rain()
-    if cinematic_time >= 360 then
+    if cinematic_time >= 420 then
       start_actual_game()
     end
   end
@@ -1087,7 +1087,7 @@ function update_cinematic()
 end
 
 function draw_cinematic()
-  cls(0)
+  cls(1)
   draw_rain()
   
   if cinematic_phase == 1 then
