@@ -21,7 +21,7 @@ local feedback_timer = 0      -- frames remaining to show feedback message
 -- player character data
 local player = {
   x = 56,           -- x position on screen (start on ladder, adjusted for 16x16)
-  y = 104,          -- y position on screen (start at ground floor level, adjusted for 16px height)
+  y = 103,          -- y position on screen (start at ground floor level, adjusted for 16px height)
   w = 16,           -- player sprite width (16x16 for animation support)
   h = 16,           -- player sprite height
   room = 0,         -- current room id (0=ladder, 1-5=rooms)
@@ -50,7 +50,7 @@ local ladder = {x=48, y=52, w=16, h=67}
 
 -- floor levels for realistic dollhouse physics (adjusted for 16px player height)
 local floor_levels = {
-  ground = 104,    -- bottom of ground floor rooms (y=88+32-16 for player height)
+  ground = 103,    -- bottom of ground floor rooms (y=88+32-16 for player height)
   second = 72,     -- bottom of second floor rooms (y=56+32-16 for player height)  
   attic = 40       -- bottom of attic room (y=24+32-16 for player height)
 }
