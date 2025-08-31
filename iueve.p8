@@ -946,18 +946,18 @@ function draw_startscreen()
   cls()  -- clear screen with black background
   
   -- big title using repeated characters to make bigger letters
-  print("III U U EEE V V EEE", 18, 10, 10)
-  print(" I  U U E   V V E  ", 18, 16, 10)
-  print(" I  U U EE  v v EE ", 18, 22, 10)
-  print(" I  U U E   V V E  ", 18, 28, 10)
-  print("III UUU EEE  V  EEE", 18, 34, 10)
+  print("III U U EEE V V EEE", 18, 5, 10)
+  print(" I  U U E   V V E  ", 18, 11, 10)
+  print(" I  U U EE  v v EE ", 18, 16, 10)
+  print(" I  U U E   V V E  ", 18, 23, 10)
+  print("III UUU EEE  V  EEE", 18, 29, 10)
   
   -- subtitle/description
-  print("programming: harpo and claude", 0, 62, 6) 
-  print("art: lili and luca", 20, 70, 6)  -- light gray
-  
+  print("programming: harpo and claude", 0, 52, 6) 
+  print("art: lili and luca", 20, 60, 6)  -- light gray
+  print("design ideas: bruno",20,68,6)
   -- high score display
-  print("high score: " .. highscore, 30, 50, 11)  -- cyan highlight
+  print("high score: " .. highscore, 30, 40, 11)  -- cyan highlight
   
   -- credits
   print("created for", 35, 80, 6)      -- light gray
