@@ -106,7 +106,7 @@ function _init()
   end
   
   -- reset tool system
-  current_kitchen_tool = 1
+  current_kitchen_tool = nil  -- start with no tool, will generate one immediately
   tool_cycle_timer = 0
   
   -- reset leak spawning system
@@ -145,7 +145,11 @@ function update_game()
   
   -- cycle to next kitchen tool when timer expires
   if tool_cycle_timer >= tool_cycle_interval then
-    current_kitchen_tool = (current_kitchen_tool % 5) + 1  -- cycle through 5 tools
+    if current_kitchen_tool then
+      current_kitchen_tool = (current_kitchen_tool % 5) + 1  -- cycle through 5 tools
+    else
+      current_kitchen_tool = flr(rnd(5)) + 1  -- generate random tool when none available
+    end
     tool_cycle_timer = 0
   end
   
@@ -333,16 +337,18 @@ function interact()
   local room = rooms[player.room]
   
   -- kitchen: pick up currently available tool or swap current tool
-  if room.name == "kitchen" then
+  if room.name == "kitchen" and current_kitchen_tool then
     if not player.inventory then
       -- pick up tool when not carrying anything
       player.inventory = current_kitchen_tool
+      current_kitchen_tool = nil  -- remove tool from kitchen (will regenerate after cycle interval)
       feedback_msg = "picked up tool"
       feedback_timer = 120  -- show message for 2 seconds
       sfx(0)  -- play pickup sound
     else
       -- swap current tool with kitchen tool
       player.inventory = current_kitchen_tool
+      current_kitchen_tool = nil  -- remove tool from kitchen (will regenerate after cycle interval)
       feedback_msg = "swapped tool"
       feedback_timer = 120  -- show message for 2 seconds
       sfx(0)  -- play pickup sound
@@ -543,7 +549,11 @@ function draw_house()
   -- kitchen tool production display (moved down for taller room)
   print("tool:", 4, 104, 7)
   -- draw current tool sprite instead of text (sprites 32-36 for tools)
-  spr(31 + current_kitchen_tool, 24, 102)
+  if current_kitchen_tool then
+    spr(31 + current_kitchen_tool, 24, 102)
+  else
+    print("--", 24, 104, 5)  -- show placeholder when no tool available
+  end
 end
 
 function update_player_animation()
