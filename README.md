@@ -26,8 +26,14 @@ Arrow keys to move, Z/X to interact. X restarts when you inevitably lose.
 
 ## Playing It
 
-Load `dollhouse_leak_fixer_compact.p8` in PICO-8 and run it.
+**PICO-8 Version:** Load `iueve.p8` in PICO-8 and run it.
+
+**JavaScript Version:** Open `js/iueve.html` in a web browser to play the exported version.
 
 ## Credits
 
 Made for Winter MEGA JAM 2025. Built in PICO-8 because constraints are fun.
+
+Programming: harpomaxx and Claude ;-)
+Art: Luca and [lili.fiallo](http://www.instagram.com/fiallolili)
+Desing Idas: Bruno
