@@ -3,7 +3,7 @@ ver 4
 __lua__
 -- dollhouse leak fixer
 gs="playing"
-sc,t,fm,ft=0,0,"",0
+sc,hs,nhs,t,fm,ft=0,0,false,0,"",0
 p={x=64,y=64,w=8,h=8,s=1,r=1,i=nil}
 rs={{i=1,n="kitchen",x=0,y=48,w=32,h=24,f=0,l=false},
 {i=2,n="bedroom",x=32,y=48,w=32,h=24,f=0,l=false},
@@ -16,6 +16,9 @@ tci,li,am=180,300,1
 fr,mf=0.1,20
 
 function _init()
+ cartdata("iueve_dollhouse")
+ hs=dget(0)
+ nhs=false
  sl()
 end
 
@@ -143,16 +146,21 @@ function cgo()
  for i,r in pairs(rs) do
   if r.n!="attic" and r.f>=mf then fc+=1 end
  end
- if fc>=4 then gs="gameover" end
+ if fc>=4 then 
+  gs="gameover"
+  if sc>hs then
+   hs=sc
+   nhs=true
+   dset(0,hs)
+  end
+ end
 end
 
 function ugo()
  if btnp(4) then
+  nhs=false
   _init()
   gs="playing"
- end
- if btn(4) then
-  print("z pressed",40,80,8)
  end
 end
 
@@ -242,7 +250,12 @@ end
 function dgo()
  print("game over!",40,50,8)
  print("final score: "..sc,35,60,7)
- print("press x to restart",25,70,6)
+ if nhs then
+  print("new high score!",32,70,11)
+ else
+  print("high score: "..hs,32,70,6)
+ end
+ print("press x to restart",25,85,6)
 end
 
 __gfx__
