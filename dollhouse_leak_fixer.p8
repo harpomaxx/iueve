@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-ver 4
+version 43
 __lua__
 -- dollhouse leak fixer
 -- a retro-inspired leak fixing game
@@ -38,15 +38,15 @@ local player = {
 -- room definitions for the 3-story dollhouse layout (expanded height)
 -- ground floor: kitchen + bedroom, second floor: bathroom + living, attic: critical room
 local rooms = {
-  {id=1, name="kitchen", x=0, y=88, w=48, h=32, flood_level=0, leak=false},     -- ground left: tool pickup
-  {id=2, name="bedroom", x=64, y=88, w=64, h=32, flood_level=0, leak=false},    -- ground right: ceiling leaks
-  {id=3, name="bathroom", x=0, y=56, w=48, h=32, flood_level=0, leak=false},    -- second left: plumbing leaks
-  {id=4, name="living", x=64, y=56, w=64, h=32, flood_level=0, leak=false},     -- second right: window cracks
-  {id=5, name="attic", x=0, y=24, w=128, h=32, flood_level=0, leak=false, critical=true}  -- top: water tank leaks
+  {id=1, name="kitchen", x=1, y=86, w=48, h=32, flood_level=0, leak=false},     -- ground left: tool pickup
+  {id=2, name="bedroom", x=66, y=86, w=59, h=32, flood_level=0, leak=false},    -- ground right: ceiling leaks
+  {id=3, name="bathroom", x=1, y=54, w=53, h=32, flood_level=0, leak=false},    -- second left: plumbing leaks
+  {id=4, name="living", x=66, y=54, w=59, h=32, flood_level=0, leak=false},     -- second right: window cracks
+  {id=5, name="attic", x=1, y=23, w=125, h=32, flood_level=0, leak=false, critical=true}  -- top: water tank leaks
 }
 
 -- ladder area for vertical movement between floors (collision area wider than visual)
-local ladder = {x=48, y=52, w=16, h=67}
+local ladder = {x=48, y=52, w=18, h=67}
 
 -- floor levels for realistic dollhouse physics (adjusted for 16px player height)
 local floor_levels = {
@@ -233,10 +233,10 @@ end
 function get_floor_level(x, y)
   -- determine which floor level the player should be on based on position
   -- check ground floor rooms first
-  if (x < 48 or x >= 64) and y >= 88 then
+  if (x < 48 or x >= 66) and y >= 88 then
     return floor_levels.ground
   -- check second floor rooms  
-  elseif (x < 48 or x >= 64) and y >= 56 and y < 88 then
+  elseif (x < 48 or x >= 66) and y >= 56 and y < 88 then
     return floor_levels.second
   -- check attic
   elseif y >= 24 and y < 56 then
@@ -247,7 +247,7 @@ end
 
 function constrain_player_position()
   -- constrain player to valid areas (rooms or ladder)
-  player.x = mid(0, player.x, screen_w - player.w)
+  player.x = mid(1, player.x, screen_w - player.w)
   player.y = mid(24, player.y, 120 - player.h)  -- expanded house height
   
   -- if not on ladder, must be in a valid room at floor level
@@ -725,11 +725,7 @@ __gfx__
 000000000000000000000000000000000000000000000000000000000000aa0000000aa000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000aa0000000aa000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000aa0000000aa000000000000000000000000000000000000000000000000000000000
-
-
-
-
 __sfx__
-001000000c0500e0500f0501005012050140501505016050180501a0501b0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c050
-001000001005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005
-00100000060500a0500e0501105013050140501505016050170501805019050190501905019050190501905019050190501905019050190501905019050190501905019050190501905019050190501905
+001000000c0500e0500f0501005012050140501505016050180501a0501b0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c0501c05000000000000000000000000000000000000
+001000001005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005010050100501005000000
+00100000060500a0500e0501105013050140501505016050170501805019050190501905019050190501905019050190501905019050190501905019050190501905019050190501905019050190501905000000
