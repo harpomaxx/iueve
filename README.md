@@ -38,4 +38,4 @@ Programming: harpomaxx and Claude ;-)
 
 Art: Luca and [lili.fiallo](http://www.instagram.com/fiallolili)
 
-Desing Ideas: Bruno
+Desing Ideas: HORNET MEGAJAM 2025 team and Bruno
