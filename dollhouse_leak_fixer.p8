@@ -947,7 +947,7 @@ function draw_startscreen()
   print("mendoza, argentina", 25, 96, 11)       -- cyan highlight
   
   -- start instruction
-  print("press x to start", 28, 115, 7)         -- white
+  print("press button (or Z) to start", 28, 115, 7)         -- white
   
   -- music toggle instruction
   local music_status = music_enabled and "on" or "off"
