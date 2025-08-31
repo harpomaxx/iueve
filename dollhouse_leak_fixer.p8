@@ -14,6 +14,8 @@ local room_h = 24     -- standard room height
 -- game state variables
 local gamestate = "start"     -- current game state: "start", "playing" or "gameover"
 local score = 0               -- player score based on survival time + leak fixes
+local highscore = 0           -- persistent high score
+local new_highscore = false   -- flag for new high score achievement
 local time_elapsed = 0        -- total frames elapsed since game start
 local feedback_msg = ""       -- current message to display to player
 local feedback_timer = 0      -- frames remaining to show feedback message
@@ -85,9 +87,14 @@ local music_enabled = true     -- allow music on/off toggle
 -- ========================================
 
 function _init()
+  -- initialize persistent data storage
+  cartdata("iueve_dollhouse")
+  
   -- reset all game state variables for fresh start
   gamestate = "start"
   score = 0
+  highscore = dget(0)  -- load persistent high score
+  new_highscore = false
   time_elapsed = 0
   feedback_msg = ""
   feedback_timer = 0
@@ -549,6 +556,14 @@ function check_game_over()
   -- game over when all 4 main rooms are fully flooded (bedroom, bathroom, living, attic)
   if flooded_rooms >= 4 then
     gamestate = "gameover"
+    
+    -- check for new high score
+    if score > highscore then
+      highscore = score
+      new_highscore = true
+      dset(0, highscore)  -- save new high score to persistent memory
+    end
+    
     -- play game over music
     if music_enabled and current_music != 2 then
       play_music(2)  -- sad game over music
@@ -559,6 +574,7 @@ end
 function update_gameover()
   -- wait for player to restart the game
   if btnp(4) then  -- x button to restart
+    new_highscore = false  -- reset new high score flag
     _init()
     gamestate = "playing"
   end
@@ -922,6 +938,9 @@ function draw_startscreen()
   print("programming: harpo and claude", 0, 62, 6) 
   print("art: lili and luca", 20, 70, 6)  -- light gray
   
+  -- high score display
+  print("high score: " .. highscore, 30, 50, 11)  -- cyan highlight
+  
   -- credits
   print("created for", 35, 80, 6)      -- light gray
   print("winter mega jam 2025", 20, 88, 11)     -- cyan highlight
@@ -944,7 +963,15 @@ function draw_gameover()
   -- game over screen with final score and restart prompt
   print("game over!", 40, 50, 8)       -- red game over text
   print("final score: " .. score, 35, 60, 7)  -- white score display
-  print("press x to restart", 25, 70, 6)      -- gray restart instruction
+  
+  -- show high score achievement or current high score
+  if new_highscore then
+    print("new high score!", 32, 70, 11)  -- cyan for new achievement
+  else
+    print("high score: " .. highscore, 32, 70, 6)  -- gray for existing high score
+  end
+  
+  print("press x to restart", 25, 85, 6)      -- gray restart instruction
 end
 
 -- ========================================
